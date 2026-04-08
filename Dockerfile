@@ -1,4 +1,3 @@
-
 # Stage 1: بناء تطبيق React
 FROM node:18-alpine AS builder
 WORKDIR /app
@@ -9,6 +8,9 @@ RUN npm install
 
 # نسخ كل كود المصدر
 COPY frontend/ ./
+
+# حل مشكلة CustomEvent في Vite مع Node.js 18
+ENV NODE_OPTIONS="--no-experimental-fetch"
 
 # مهم جداً: منع أخطاء ESLint من إيقاف البناء
 ENV CI=false
