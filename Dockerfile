@@ -21,38 +21,35 @@ ENV DISABLE_ESLINT_PLUGIN=true
 RUN npm run build
 
 # ============================================
-# Stage 2: تجهيز Backend (Node.js/Express)
-# ============================================
-FROM node:18-alpine AS backend-builder
-
-WORKDIR /app/backend
-
-# نسخ ملفات الاعتماديات الخاصة بـ backend
-COPY backend/package*.json ./
-RUN npm install
-
-# نسخ كود backend بالكامل
-COPY backend/ ./
-
-# ============================================
-# Stage 3: الصورة النهائية
+# Stage 2: الصورة النهائية (Backend + Frontend)
 # ============================================
 FROM node:18-alpine
 
 WORKDIR /app
 
-# نسخ backend من المرحلة السابقة
-COPY --from=backend-builder /app/backend ./backend
+# تثبيت PostgreSQL client (اختياري)
+RUN apk add --no-cache postgresql-client
 
-# نسخ ملفات frontend المبنية (HTML, CSS, JS)
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
-
-# تثبيت فقط dependencies الإنتاجية للـ backend
-WORKDIR /app/backend
+# نسخ ملفات الاعتماديات الخاصة بـ backend
+COPY backend/package*.json ./
 RUN npm install --omit=dev
 
+# نسخ كود backend بالكامل
+COPY backend/ ./
+
+# نسخ ملفات frontend المبنية من المرحلة السابقة
+COPY --from=frontend-builder /app/frontend/build ./frontend/build
+
+# إنشاء مجلد للبيانات (إذا لزم الأمر)
+RUN mkdir -p /app/data /app/logs
+
+# متغيرات البيئة الافتراضية
+ENV NODE_ENV=production
+ENV PORT=5001
+ENV HOST=0.0.0.0
+
 # فتح المنفذ
-EXPOSE 3000
+EXPOSE 5001
 
 # تشغيل الخادم
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
