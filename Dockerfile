@@ -25,7 +25,8 @@ FROM node:20-alpine AS backend-deps
 
 WORKDIR /app/backend
 
-RUN apk upgrade --no-cache
+RUN apk upgrade --no-cache && \
+    apk add --no-cache python3 make g++
 
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev
