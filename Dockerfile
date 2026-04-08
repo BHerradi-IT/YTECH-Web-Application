@@ -1,55 +1,59 @@
-# ============================================
-# Stage 1: بناء تطبيق React (Frontend)
-# ============================================
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# نسخ ملفات الاعتماديات الخاصة بـ frontend
-COPY frontend/package*.json ./
-RUN npm install
+RUN apk upgrade --no-cache
 
-# نسخ كود frontend بالكامل
+ARG REACT_APP_ENV=production
+ARG REACT_APP_API_URL=
+ARG REACT_APP_WS_URL=
+ARG REACT_APP_CSRF_COOKIE_NAME=ytech_csrf
+
+ENV REACT_APP_ENV=$REACT_APP_ENV
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV REACT_APP_WS_URL=$REACT_APP_WS_URL
+ENV REACT_APP_CSRF_COOKIE_NAME=$REACT_APP_CSRF_COOKIE_NAME
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
 COPY frontend/ ./
-
-# حل مشكلة CustomEvent في Vite
-ENV NODE_OPTIONS="--no-experimental-fetch"
-ENV CI=false
-ENV DISABLE_ESLINT_PLUGIN=true
-
-# بناء تطبيق React
 RUN npm run build
 
-# ============================================
-# Stage 2: الصورة النهائية (Backend + Frontend)
-# ============================================
-FROM node:18-alpine
 
-WORKDIR /app
+FROM node:20-alpine AS backend-deps
 
-# تثبيت PostgreSQL client (اختياري)
-RUN apk add --no-cache postgresql-client
+WORKDIR /app/backend
 
-# نسخ ملفات الاعتماديات الخاصة بـ backend
-COPY backend/package*.json ./
-RUN npm install --omit=dev
+RUN apk upgrade --no-cache
 
-# نسخ كود backend بالكامل
-COPY backend/ ./
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --omit=dev
 
-# نسخ ملفات frontend المبنية من المرحلة السابقة
-COPY --from=frontend-builder /app/frontend/build ./frontend/build
 
-# إنشاء مجلد للبيانات (إذا لزم الأمر)
-RUN mkdir -p /app/data /app/logs
+FROM node:20-alpine AS runtime
 
-# متغيرات البيئة الافتراضية
 ENV NODE_ENV=production
 ENV PORT=5001
 ENV HOST=0.0.0.0
 
-# فتح المنفذ
+WORKDIR /app
+
+RUN apk upgrade --no-cache \
+  && addgroup -S ytech \
+  && adduser -S -G ytech ytech
+
+COPY --from=backend-deps /app/backend/node_modules ./backend/node_modules
+COPY --chown=ytech:ytech backend ./backend
+COPY --from=frontend-builder --chown=ytech:ytech /app/frontend/build ./frontend/build
+
+WORKDIR /app/backend
+
+USER ytech
+
 EXPOSE 5001
 
-# تشغيل الخادم
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:5001/api/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+
 CMD ["node", "server.js"]
