@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "ynov-project-image"
+        IMAGE_NAME = "YTECH-Web-Application-image"
         CONTAINER_NAME = "ynov-project-container"
         SONAR_HOST_URL = "http://192.168.142.143:9000"
         SONAR_TOKEN = credentials('sonar-token')
         
         // Docker Hub Settings
         DOCKER_HUB_USERNAME = "peacechouaib"
-        DOCKER_HUB_IMAGE = "ynov-project"
+        DOCKER_HUB_IMAGE = "YTECH-Web-Application"
         
         // Email Settings
         EMAIL_RECIPIENT = "herraditech@gmail.com"
@@ -18,7 +18,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git branch: 'main', url: 'https://github.com/BHerradi-IT/YNOV-PROJECT.git'
+                git branch: 'main', url: 'https://github.com/BHerradi-IT/YTECH-Web-Application.git'
             }
         }
 
@@ -34,7 +34,7 @@ pipeline {
                           sonarsource/sonar-scanner-cli:latest \
                           sonar-scanner \
                           -Dsonar.projectKey=ynov-react-app \
-                          -Dsonar.projectName="YNOV React App" \
+                          -Dsonar.projectName="YTECH-Web-Application" \
                           -Dsonar.projectVersion=1.0 \
                           -Dsonar.sources=frontend/src \
                           -Dsonar.exclusions=**/node_modules/**,**/*.test.js \
@@ -54,7 +54,7 @@ pipeline {
                     sleep(time: 30, unit: 'SECONDS')
                     
                     sh '''
-                        STATUS=$(curl -s -u ${SONAR_TOKEN}: "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=ynov-react-app" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+                        STATUS=$(curl -s -u ${SONAR_TOKEN}: "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=YTECH-Web-Application" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
                         echo "Quality Gate Status: ${STATUS}"
                         
                         if [ "$STATUS" = "ERROR" ]; then
@@ -86,10 +86,9 @@ pipeline {
                         
                         mkdir -p reports
                         
-                        # سحب صورة Trivy (استخدم الاسم الصحيح)
+                        #  Trivy 
                         docker pull aquasec/trivy:0.59.0
                         
-                        # فحص الصورة وإنشاء تقرير نصي
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           -v $(pwd):/src \
@@ -100,7 +99,7 @@ pipeline {
                           --format table \
                           --output reports/trivy-scan.txt || true
                         
-                        # إنشاء تقرير JSON
+                        # file JSON
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           -v $(pwd):/src \
@@ -110,7 +109,7 @@ pipeline {
                           --format json \
                           --output reports/trivy-report.json || true
                         
-                        # عرض التقرير
+                        # Repport
                         echo "========================================="
                         echo "📊 Trivy Scan Summary"
                         echo "========================================="
