@@ -1,26 +1,58 @@
-# Stage 1: بناء تطبيق React
-FROM node:18-alpine AS builder
-WORKDIR /app
+# ============================================
+# Stage 1: بناء تطبيق React (Frontend)
+# ============================================
+FROM node:18-alpine AS frontend-builder
 
-# نسخ ملفات الاعتماديات
+WORKDIR /app/frontend
+
+# نسخ ملفات الاعتماديات الخاصة بـ frontend
 COPY frontend/package*.json ./
 RUN npm install
 
-# نسخ كل كود المصدر
+# نسخ كود frontend بالكامل
 COPY frontend/ ./
 
-# حل مشكلة CustomEvent في Vite مع Node.js 18
+# حل مشكلة CustomEvent في Vite
 ENV NODE_OPTIONS="--no-experimental-fetch"
-
-# مهم جداً: منع أخطاء ESLint من إيقاف البناء
 ENV CI=false
 ENV DISABLE_ESLINT_PLUGIN=true
 
-# بناء التطبيق
+# بناء تطبيق React
 RUN npm run build
 
-# Stage 2: التشغيل باستخدام Nginx
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# ============================================
+# Stage 2: تجهيز Backend (Node.js/Express)
+# ============================================
+FROM node:18-alpine AS backend-builder
+
+WORKDIR /app/backend
+
+# نسخ ملفات الاعتماديات الخاصة بـ backend
+COPY backend/package*.json ./
+RUN npm install
+
+# نسخ كود backend بالكامل
+COPY backend/ ./
+
+# ============================================
+# Stage 3: الصورة النهائية
+# ============================================
+FROM node:18-alpine
+
+WORKDIR /app
+
+# نسخ backend من المرحلة السابقة
+COPY --from=backend-builder /app/backend ./backend
+
+# نسخ ملفات frontend المبنية (HTML, CSS, JS)
+COPY --from=frontend-builder /app/frontend/build ./frontend/build
+
+# تثبيت فقط dependencies الإنتاجية للـ backend
+WORKDIR /app/backend
+RUN npm install --omit=dev
+
+# فتح المنفذ
+EXPOSE 3000
+
+# تشغيل الخادم
+CMD ["npm", "start"]
