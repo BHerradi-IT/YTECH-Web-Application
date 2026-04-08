@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "YTECH-Web-Application-image"
+        IMAGE_NAME = "ytech-web-application-image"
         CONTAINER_NAME = "ynov-project-container"
         SONAR_HOST_URL = "http://192.168.142.143:9000"
         SONAR_TOKEN = credentials('sonar-token')
         
         // Docker Hub Settings
         DOCKER_HUB_USERNAME = "peacechouaib"
-        DOCKER_HUB_IMAGE = "YTECH-Web-Application"
+        DOCKER_HUB_IMAGE = "ytech-web-application"
         
         // Email Settings
         EMAIL_RECIPIENT = "herraditech@gmail.com"
@@ -77,7 +77,6 @@ pipeline {
             }
         }
 
-        // ========== Trivy Security Scan (مصحح) ==========
         stage('Trivy Security Scan') {
             steps {
                 script {
@@ -86,7 +85,6 @@ pipeline {
                         
                         mkdir -p reports
                         
-                        #  Trivy 
                         docker pull aquasec/trivy:0.59.0
                         
                         docker run --rm \
@@ -99,7 +97,6 @@ pipeline {
                           --format table \
                           --output reports/trivy-scan.txt || true
                         
-                        # file JSON
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           -v $(pwd):/src \
@@ -109,7 +106,6 @@ pipeline {
                           --format json \
                           --output reports/trivy-report.json || true
                         
-                        # Repport
                         echo "========================================="
                         echo "📊 Trivy Scan Summary"
                         echo "========================================="
