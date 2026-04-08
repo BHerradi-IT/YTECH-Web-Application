@@ -33,7 +33,7 @@ pipeline {
                           -w /usr/src \
                           sonarsource/sonar-scanner-cli:latest \
                           sonar-scanner \
-                          -Dsonar.projectKey=ynov-react-app \
+                          -Dsonar.projectKey=YTECH-Web-Application \
                           -Dsonar.projectName="YTECH-Web-Application" \
                           -Dsonar.projectVersion=1.0 \
                           -Dsonar.sources=frontend/src \
